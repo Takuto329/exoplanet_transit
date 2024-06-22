@@ -1,10 +1,9 @@
-#!/opt/anaconda3/bin python3
+#!/usr/bin/env python3
 from pyraf import iraf
 from iraf import noao
 from iraf import digiphot
 from iraf import apphot
 from iraf import images
-import pandas as pd
 import os
 
 iraf.unlearn('apphot')  # パラメータの初期化
@@ -34,21 +33,14 @@ iraf.imstat.fields = 'sum,area'
 iraf.imstat.format = 'yes'
 iraf.imstat.cache = 'yes'
 
-image_path = "/Users/takuto/Downloads/iriki/Transit/"
+image_path = "/Users/takuto/iriki/data/GJ3470"
 myimage = "g240128-0103.fits"
-
-# 実際の画像ファイルのパスを生成
 full_image_path = os.path.join(image_path, myimage)
 
-# ファイルの存在を確認する
-if not os.path.exists(full_image_path):
-    print(f"Error: File '{full_image_path}' not found.")
-else:
-    try:
-        # IRAF の処理を実行する
-        iraf.phot(myimage, coords="a.txt", output="4.txt")
-    except iraf.IrafError as e:
-        print(f"IRAF error: {e}")
+a = "/Users/takuto/iriki/data/GJ3470/a.txt"
+
+iraf.phot(full_image_path, coords=a, output='/Users/takuto/iriki/test/4.txt')
+    
 
 
 
