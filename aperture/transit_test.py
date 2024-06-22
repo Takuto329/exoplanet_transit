@@ -10,7 +10,3 @@ m.plot()
 plt.xlim(-5,5)
 plt.ylim(-5,5)
 plt.show()
-
-
-
-
