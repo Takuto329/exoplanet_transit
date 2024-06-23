@@ -4,6 +4,7 @@ from iraf import noao
 from iraf import digiphot
 from iraf import apphot
 from iraf import images
+from astropy.io import fits
 import pandas as pd 
 import os
 import matplotlib.pyplot as plt
@@ -72,11 +73,22 @@ for files in range(start_file,end_file+1):
 
 
     iraf.phot(image, coords=coo_path, output=output_path) #測光
-    flux = iraf.pdump(output_path, fields="FLUX",expr="yes",Stdout=1) #qdumpでFluxをとってくる
+    flux_data = iraf.pdump(output_path, fields="FLUX",expr="yes",Stdout=1) #qdumpでFluxをとってくる
+    flux = float(flux_data[0].strip())
     FLUX.append(flux)
 
-    JD_value = iraf.imgets(image,"UT",Stdout=1)
-    print(JD_value)
+    hda = fits.open(image)
+    TIME.append(hda[0].header["JD"]) #JDをとってくる
+    hda.close()
+
+plt.plot(TIME, FLUX)
+plt.xlabel('JD')
+plt.ylabel('Flux')
+plt.title('JD vs Flux')
+plt.grid(True)
+plt.show()
+
+
 
 
 
