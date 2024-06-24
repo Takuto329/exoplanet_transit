@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 
 object = input("star_data(e.g.240128):")
+# object = 'GJ3470_240128'
 
 #configファイルから各種パラメータをとってくる
 config_path = f"/Users/takuto/iriki/{object}/config.txt"
@@ -54,7 +55,7 @@ iraf.imstat.cache = 'yes'
 
 
 #パスの指定
-image_path = f"/Users/takuto/iriki/{object}/raw_image"
+image_path = f"/Users/takuto/iriki/{object}/reduction_image"
 
 object_path = f"/Users/takuto/iriki/{object}/object.coo"
 compa_path = f"/Users/takuto/iriki/{object}/compa.coo"
@@ -68,7 +69,8 @@ FLUX = []
 TIME = []
 for files in range(start_file,end_file+1):
 
-    image = f"{image_path}/g{date}-{files:04d}.fits"
+    # image = f"{image_path}/j{date}-{files:04d}.fits"
+    image = f"{image_path}/hf{files:04d}.fits"
 
     if not os.path.exists(image):
         print("File {} does not exist. Skipping.".format(image))
@@ -89,12 +91,14 @@ for files in range(start_file,end_file+1):
 
 
    
-    hda = fits.open(image)
-    TIME.append(hda[0].header["JD"]) #JDをとってくる
-    hda.close()
+    # hda = fits.open(image)
+    # TIME.append(hda[0].header["JD"]) #JDをとってくる
+    # hda.close()
 
 
-plt.plot(TIME, FLUX)
+
+plt.scatter(range(len(FLUX)),FLUX)
+# plt.scatter(TIME,FLUX)
 plt.xlabel('JD')
 plt.ylabel('Flux')
 plt.title('qFlux')
