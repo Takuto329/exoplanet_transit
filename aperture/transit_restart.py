@@ -55,9 +55,12 @@ iraf.imstat.cache = 'yes'
 
 #パスの指定
 image_path = f"/Users/takuto/iriki/{object}/data"
-coo_path = f"/Users/takuto/iriki/{object}/1.coo"
-output_path = f"/Users/takuto/iriki/{object}/value.txt"
-output_path2 = f"/Users/takuto/iriki/{object}"
+
+object_path = f"/Users/takuto/iriki/{object}/object.coo"
+compa_path = f"/Users/takuto/iriki/{object}/compa.coo"
+
+object_output_path = f"/Users/takuto/iriki/{object}/object_value.txt"
+compa_output_path = f"/Users/takuto/iriki/{object}/compa_value.txt"
 
 
 #解析
@@ -72,19 +75,29 @@ for files in range(start_file,end_file+1):
         continue
 
 
-    iraf.phot(image, coords=coo_path, output=output_path) #測光
-    flux_data = iraf.pdump(output_path, fields="FLUX",expr="yes",Stdout=1) #qdumpでFluxをとってくる
-    flux = float(flux_data[0].strip())
+    iraf.phot(image, coords=object_path, output=object_output_path) #目標星の測光
+    object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでFluxをとってくる
+    object_flux = float(object_flux_data[0].strip())
+    
+
+    iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
+    compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでFluxをとってくる
+    compa_flux = float(compa_flux_data[0].strip())
+
+    flux = object_flux / compa_flux #fluxを割って相対的にする
     FLUX.append(flux)
 
+
+   
     hda = fits.open(image)
     TIME.append(hda[0].header["JD"]) #JDをとってくる
     hda.close()
 
+
 plt.plot(TIME, FLUX)
 plt.xlabel('JD')
 plt.ylabel('Flux')
-plt.title('JD vs Flux')
+plt.title('qFlux')
 plt.grid(True)
 plt.show()
 
