@@ -54,7 +54,7 @@ iraf.imstat.cache = 'yes'
 
 
 #パスの指定
-image_path = f"/Users/takuto/iriki/{object}/data"
+image_path = f"/Users/takuto/iriki/{object}/raw_image"
 
 object_path = f"/Users/takuto/iriki/{object}/object.coo"
 compa_path = f"/Users/takuto/iriki/{object}/compa.coo"
