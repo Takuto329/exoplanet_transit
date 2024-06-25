@@ -7,6 +7,7 @@ from iraf import images
 from astropy.io import fits
 import pandas as pd 
 import os
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -56,6 +57,7 @@ iraf.imstat.cache = 'yes'
 
 #パスの指定
 image_path = f"/Users/takuto/iriki/{object}/reduction_image"
+syu_path = f"/Users/takuto/iriki/{object}"
 
 object_path = f"/Users/takuto/iriki/{object}/object.coo"
 compa_path = f"/Users/takuto/iriki/{object}/compa.coo"
@@ -66,11 +68,17 @@ compa_output_path = f"/Users/takuto/iriki/{object}/compa_value.txt"
 
 #解析
 FLUX = []
+ERROR = []
+X = []
+Y = []
 TIME = []
+AIRMASS = []
+
+
 for files in range(start_file,end_file+1):
 
-    # image = f"{image_path}/j{date}-{files:04d}.fits"
-    image = f"{image_path}/hf{files:04d}.fits"
+    image = f"{image_path}/j{date}-{files:04d}.fits"
+    # image = f"{image_path}/hf{files:04d}.fits"
 
     if not os.path.exists(image):
         print("File {} does not exist. Skipping.".format(image))
@@ -78,32 +86,57 @@ for files in range(start_file,end_file+1):
 
 
     iraf.phot(image, coords=object_path, output=object_output_path) #目標星の測光
-    object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでFluxをとってくる
-    object_flux = float(object_flux_data[0].strip())
-    
 
+    object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
+    object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
+    object_xcenter = iraf.pdump(object_output_path, fields="XCENTER",expr="yes",Stdout=1)
+    object_ycenter = iraf.pdump(object_output_path, fields="YCENTER",expr="yes",Stdout=1)
+
+    object_flux = float(object_flux_data[0].strip())
+    object_error = 10**(float(object_error_data[0].strip()) / 2.5)
+    objectx = 86.80 - float(object_xcenter[0].strip())
+    objecty = 65.06 - float(object_ycenter[0].strip())
+
+    
     iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
-    compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでFluxをとってくる
+
+    compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
+    
     compa_flux = float(compa_flux_data[0].strip())
+    
 
     flux = object_flux / compa_flux #fluxを割って相対的にする
     FLUX.append(flux)
+    ERROR.append(object_error)
+    X.append(objectx)
+    Y.append(objecty)
 
 
-   
-    # hda = fits.open(image)
-    # TIME.append(hda[0].header["JD"]) #JDをとってくる
-    # hda.close()
+    hda = fits.open(image)
+    TIME.append(hda[0].header["MJD"]) #JDをとってくる
+    AIRMASS.append(hda[0].header["AIRMASS"])
+    hda.close()
 
+data = {
+    'FLUX': FLUX,
+    'ERROR': ERROR,
+    'TIME': TIME,
+    'AIRMASS': AIRMASS,
+    'X': X,
+    'Y': Y
+}
+df = pd.DataFrame(data)
 
+# データフレームをテキストファイルに保存
+df.to_csv(f"/Users/takuto/iriki/{object}/{object}_data.txt", index = False, sep=',')
 
-plt.scatter(range(len(FLUX)),FLUX)
-# plt.scatter(TIME,FLUX)
-plt.xlabel('JD')
-plt.ylabel('Flux')
-plt.title('qFlux')
-plt.grid(True)
-plt.show()
+# plt.scatter(range(len(FLUX)),FLUX)
+# plt.scatter(TIME,MAG)
+# plt.xlabel('JD')
+# plt.ylabel('Flux')
+# plt.title('qFlux')
+# plt.grid(True)
+# plt.show()
 
 
 
