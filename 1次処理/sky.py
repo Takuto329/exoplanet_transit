@@ -5,11 +5,11 @@ iraf.unlearn('imstat')
 iraf.imstat.field = 'midpt'
 iraf.imstat.nclip = 10
 
-# object = input("star_data(e.g.240128):")
-object = 'GJ3470_240128'
+object = input("star_data(e.g.GJ3470_240128):")
+# object = 'GJ1214'
 
 #configファイルから各種パラメータをとってくる
-config_path = f"/Users/takuto/iriki/{object}/config.txt"
+config_path = f"/Users/takuto/iriki/{object}/config_file/config.txt"
 config = pd.read_csv(config_path, delimiter='\t')
 data = pd.DataFrame(config)
 
@@ -30,11 +30,9 @@ flat_image_path = f"/Users/takuto/iriki/flat_image"
 
 
 
-for band in ['j', 'h', 'k']:
-   
-
+for band in ['g','i','j', 'h', 'k']:
 #---------------------------------------------------------------------------------------------------------------
-    #すべての画像をフラットで割る
+    # #すべての画像をフラットで割る
     for all_files in range(all_start_file,all_end_file+1):
 
         raw_image = f"{raw_image_path}/{band}{date}-{all_files:04d}.fits"
@@ -53,6 +51,7 @@ for band in ['j', 'h', 'k']:
     for sky_files in range(sky_start_file,sky_end_file+1):
 
         image = f"{reduction_image_path}/{band}{date}-{sky_files:04d}.fits"
+        # image = f"{reduction_image_path}/{band}f{sky_files:04d}.fits" #GJ1214をするとき用(廃線みたいでいいね)
 
         if not os.path.exists(image):
             print("File {} does not exist. Skipping.".format(image))
@@ -65,13 +64,14 @@ for band in ['j', 'h', 'k']:
     #skyを引く
     for raw_files in range(start_file,end_file+1):
         reduction_image = f"{reduction_image_path}/{band}{date}-{raw_files:04d}.fits"
+        # reduction_image = f"{reduction_image_path}/{band}f{raw_files:04d}.fits" #GJ1214をするとき用(廃線みたいでいいね)
 
         if not os.path.exists(reduction_image):
             print("File {} does not exist. Skipping.".format(reduction_image))
             continue
 
         iraf.imarith(reduction_image, '-', f'{sky_image_path}/SKY_{band}.fits', reduction_image) #測光したい画像からスカイを引く
-        
+#---------------------------------------------------------------------------------------------------------------        
         
 
 
