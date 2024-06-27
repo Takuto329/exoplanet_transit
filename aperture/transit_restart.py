@@ -15,7 +15,7 @@ object = input("star_data(e.g.240128):")
 # object = 'GJ3470_240128'
 
 #configファイルから各種パラメータをとってくる
-config_path = f"/Users/takuto/iriki/{object}/config.txt"
+config_path = f"/Users/takuto/iriki/{object}/config_file/config.txt"
 config = pd.read_csv(config_path, delimiter='\t')
 data = pd.DataFrame(config)
 
@@ -59,11 +59,16 @@ iraf.imstat.cache = 'yes'
 image_path = f"/Users/takuto/iriki/{object}/reduction_image"
 syu_path = f"/Users/takuto/iriki/{object}"
 
-object_path = f"/Users/takuto/iriki/{object}/object.coo"
-compa_path = f"/Users/takuto/iriki/{object}/compa.coo"
+object_path = f"/Users/takuto/iriki/{object}/config_file/object.coo"
+compa_path = f"/Users/takuto/iriki/{object}/config_file/compa.coo"
 
-object_output_path = f"/Users/takuto/iriki/{object}/object_value.txt"
-compa_output_path = f"/Users/takuto/iriki/{object}/compa_value.txt"
+object_output_path = f"/Users/takuto/iriki/{object}/data/object_value.txt"
+compa_output_path = f"/Users/takuto/iriki/{object}/data/compa_value.txt"
+
+
+iraf.phot(f"{image_path}/j{date}-{start_file:04d}.fits", coords=object_path, output=object_output_path)
+object_xcenter = iraf.pdump(object_output_path, fields="XCENTER",expr="yes",Stdout=1)
+object_ycenter = iraf.pdump(object_output_path, fields="YCENTER",expr="yes",Stdout=1)
 
 
 #解析
@@ -73,7 +78,6 @@ X = []
 Y = []
 TIME = []
 AIRMASS = []
-
 
 for files in range(start_file,end_file+1):
 
