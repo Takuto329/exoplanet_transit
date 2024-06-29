@@ -144,7 +144,7 @@ for files in range(start_file,end_file+1):
     inner_radius = 24  # 内半径
     outer_radius = 29  # 外半径
 
-    # 中抜き円状のsky領域を作成し、その平均カウント数を計算
+    
     mask = create_annulus_mask(data.shape, sky_center, inner_radius, outer_radius)
     sky_region = data[mask]
     sky_threshold = np.max(sky_region)
@@ -174,6 +174,8 @@ for files in range(start_file,end_file+1):
         yz = y + 410
         with open(object_path, mode='w') as f:
             f.write(str(xz)+' '+str(yz))
+
+
 
 
     sky_center = (420, 145)  # (y, x)
