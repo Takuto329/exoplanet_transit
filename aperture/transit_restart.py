@@ -105,9 +105,9 @@ for files in range(start_file,end_file+1):
     if not os.path.exists(image):
         print("File {} does not exist. Skipping.".format(image))
         continue
-    #--------------------------------------------------------------
+#--------------------------------------------------------------    
     hdu = fits.open(image)
-
+#--------------------------------------------------------------
     data = hdu[0].data
     x_center, y_center = 580, 495
     radius = 20
@@ -122,12 +122,10 @@ for files in range(start_file,end_file+1):
 
     X.append(x_M)
     Y.append(y_M)
-
-    # TIME.append(hda[0].header["MJD"]) #JDをとってくる
+#--------------------------------------------------------------
     AIRMASS.append(hdu[0].header["AIRMASS"])
-
-
-
+#--------------------------------------------------------------    
+    # TIME.append(hda[0].header["MJD"]) #JDをとってくる
     DATE_UTC = hdu[0].header["DATE_UTC"]
     TIME_UTC = hdu[0].header["TIME_UTC"]
 
@@ -140,7 +138,7 @@ for files in range(start_file,end_file+1):
     
     # TIME列にMJDを追加
     TIME.append(mjd)
-
+#--------------------------------------------------------------
     sky_center = (580, 495)  # (y, x)
     inner_radius = 24  # 内半径
     outer_radius = 29  # 外半径
@@ -150,7 +148,6 @@ for files in range(start_file,end_file+1):
     sky_region = data[mask]
     sky_threshold = np.max(sky_region)
 
-    
     x_start, x_end = 490, 670
     y_start, y_end = 410, 590
 
@@ -162,10 +159,6 @@ for files in range(start_file,end_file+1):
     binary_image = (binary_region * 255).astype(np.uint8)  # OpenCVが扱いやすいように変換
 
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-
-    # 星の中心を求める
-
     
     for contour in contours:
         if cv2.contourArea(contour) < 10:
@@ -175,22 +168,18 @@ for files in range(start_file,end_file+1):
         yz = y + 410
         with open(object_path, mode='w') as f:
             f.write(str(xz)+' '+str(yz))
-
-
-
-
-    sky_center = (420, 145)  # (y, x)
+ #--------------------------------------------------------------
+    sky_center = (420, 147)  # (y, x)
     inner_radius = 24  # 内半径
     outer_radius = 29  # 外半径
 
-    # 中抜き円状のsky領域を作成し、その平均カウント数を計算
+    
     mask = create_annulus_mask(data.shape, sky_center, inner_radius, outer_radius)
     sky_region = data[mask]
     sky_threshold = np.max(sky_region)
 
-    
-    x_start, x_end = 370, 470
-    y_start, y_end = 95, 195
+    x_start, x_end = 380, 470
+    y_start, y_end = 97, 197
 
     region = data[y_start:y_end, x_start:x_end]
 
@@ -200,17 +189,18 @@ for files in range(start_file,end_file+1):
     binary_image = (binary_region * 255).astype(np.uint8)  # OpenCVが扱いやすいように変換
 
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
     
     for contour in contours:
         if cv2.contourArea(contour) < 10:
             continue
         (x, y), radius = cv2.minEnclosingCircle(contour)
-        xz = x + 370
-        yz = y + 95
+        xz = x + 380
+        yz = y + 97
         with open(compa_path, mode='w') as f:
             f.write(str(xz)+' '+str(yz))
-    
+
+ #--------------------------------------------------------------         
+
     hdu.close()
 
  #--------------------------------------------------------------
@@ -223,8 +213,7 @@ for files in range(start_file,end_file+1):
 
     object_flux = float(object_flux_data[0].strip())
     object_error = 10**(float(object_error_data[0].strip()) / 2.5)
-    objectx = 86.80 - float(object_xcenter[0].strip())
-    objecty = 65.06 - float(object_ycenter[0].strip())
+    
 
     
     iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
@@ -235,14 +224,10 @@ for files in range(start_file,end_file+1):
     flux = object_flux / compa_flux #fluxを割って相対的にする
     FLUX.append(flux)
     ERROR.append(object_error)
-    X.append(objectx)
-    Y.append(objecty)
+ #--------------------------------------------------------------
 
 
-    hda = fits.open(image)
-    TIME.append(hda[0].header["MJD"]) #JDをとってくる
-    AIRMASS.append(hda[0].header["AIRMASS"])
-    hda.close()
+    
 
 data = {
     'FLUX': FLUX,
