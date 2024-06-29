@@ -143,7 +143,6 @@ for files in range(start_file,end_file+1):
     inner_radius = 24  # 内半径
     outer_radius = 29  # 外半径
 
-    
     mask = create_annulus_mask(data.shape, sky_center, inner_radius, outer_radius)
     sky_region = data[mask]
     sky_threshold = np.max(sky_region)
@@ -173,7 +172,6 @@ for files in range(start_file,end_file+1):
     inner_radius = 24  # 内半径
     outer_radius = 29  # 外半径
 
-    
     mask = create_annulus_mask(data.shape, sky_center, inner_radius, outer_radius)
     sky_region = data[mask]
     sky_threshold = np.max(sky_region)
@@ -198,37 +196,24 @@ for files in range(start_file,end_file+1):
         yz = y + 97
         with open(compa_path, mode='w') as f:
             f.write(str(xz)+' '+str(yz))
-
  #--------------------------------------------------------------         
-
     hdu.close()
-
  #--------------------------------------------------------------
     iraf.phot(image, coords=object_path, output=object_output_path) #目標星の測光
-
     object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
     object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
-    object_xcenter = iraf.pdump(object_output_path, fields="XCENTER",expr="yes",Stdout=1)
-    object_ycenter = iraf.pdump(object_output_path, fields="YCENTER",expr="yes",Stdout=1)
-
     object_flux = float(object_flux_data[0].strip())
     object_error = 10**(float(object_error_data[0].strip()) / 2.5)
     
-
-    
     iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
-
     compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
     compa_flux = float(compa_flux_data[0].strip())
     
     flux = object_flux / compa_flux #fluxを割って相対的にする
+
     FLUX.append(flux)
     ERROR.append(object_error)
  #--------------------------------------------------------------
-
-
-    
-
 data = {
     'FLUX': FLUX,
     'ERROR': ERROR,
@@ -239,10 +224,9 @@ data = {
 }
 df = pd.DataFrame(data)
 
-
 dt_now = datetime.datetime.now()
 # データフレームをテキストファイルに保存
-df.to_csv(f"/Users/takuto/iriki/{object}/{object}{dt_now}_data.txt", index = False, sep=',')
+df.to_csv(f"/Users/takuto/iriki/{object}/{dt_now}data.txt", index = False, sep=',')
 
 plt.scatter(range(len(FLUX)),FLUX) 
 # plt.scatter(TIME,FLUX)
@@ -251,8 +235,8 @@ plt.ylabel('Flux')
 plt.title('qFlux')
 plt.grid(True)
 plt.ylim(0.9,1.0)
-plt.savefig(f"/Users/takuto/iriki/{object}/{object}_{dt_now}.png")
-print("1")
+plt.savefig(f"/Users/takuto/iriki/{object}/{dt_now}.png")
+
 
 
 
