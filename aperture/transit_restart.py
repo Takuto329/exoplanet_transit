@@ -13,6 +13,7 @@ import datetime
 import cv2
 from scipy.ndimage import center_of_mass
 import matplotlib.pyplot as plt
+from scipy.ndimage import center_of_mass
 
 
 # object = input("star_data(e.g.240128):")
@@ -217,8 +218,14 @@ for files in range(start_file,end_file+1):
 
     object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
     object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
+    object_xcenter = iraf.pdump(object_output_path, fields="XCENTER",expr="yes",Stdout=1)
+    object_ycenter = iraf.pdump(object_output_path, fields="YCENTER",expr="yes",Stdout=1)
+
     object_flux = float(object_flux_data[0].strip())
     object_error = 10**(float(object_error_data[0].strip()) / 2.5)
+    objectx = 86.80 - float(object_xcenter[0].strip())
+    objecty = 65.06 - float(object_ycenter[0].strip())
+
     
     iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
 
@@ -228,6 +235,14 @@ for files in range(start_file,end_file+1):
     flux = object_flux / compa_flux #fluxを割って相対的にする
     FLUX.append(flux)
     ERROR.append(object_error)
+    X.append(objectx)
+    Y.append(objecty)
+
+
+    hda = fits.open(image)
+    TIME.append(hda[0].header["MJD"]) #JDをとってくる
+    AIRMASS.append(hda[0].header["AIRMASS"])
+    hda.close()
 
 data = {
     'FLUX': FLUX,
