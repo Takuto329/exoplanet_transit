@@ -9,6 +9,7 @@ import pandas as pd
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.ndimage import center_of_mass
 
 
 object = input("star_data(e.g.240128):")
@@ -93,13 +94,10 @@ for files in range(start_file,end_file+1):
 
     object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
     object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
-    object_xcenter = iraf.pdump(object_output_path, fields="XCENTER",expr="yes",Stdout=1)
-    object_ycenter = iraf.pdump(object_output_path, fields="YCENTER",expr="yes",Stdout=1)
+   
 
     object_flux = float(object_flux_data[0].strip())
     object_error = 10**(float(object_error_data[0].strip()) / 2.5)
-    objectx = 86.80 - float(object_xcenter[0].strip())
-    objecty = 65.06 - float(object_ycenter[0].strip())
 
     
     iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
@@ -117,6 +115,20 @@ for files in range(start_file,end_file+1):
 
 
     hda = fits.open(image)
+    data = hdu[0].data
+    x_center, y_center = 580, 495
+    radius = 20
+
+    y, x = np.ogrid[:data.shape[0], :data.shape[1]]
+    mask = (x - x_center)**2 + (y - y_center)**2 <= radius**2
+    masked_data = np.where(mask, data, 0)
+    y_centroid, x_centroid = center_of_mass(masked_data)
+
+    x_M = x_center - x_centroid
+    y_M = y_center - y_centroid
+
+    X.append(x_M)
+    Y.append(y_M)
     TIME.append(hda[0].header["MJD"]) #JDをとってくる
     AIRMASS.append(hda[0].header["AIRMASS"])
     hda.close()
