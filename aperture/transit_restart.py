@@ -104,25 +104,7 @@ for files in range(start_file,end_file+1):
     if not os.path.exists(image):
         print("File {} does not exist. Skipping.".format(image))
         continue
-
-
-    iraf.phot(image, coords=object_path, output=object_output_path) #目標星の測光
-
-    object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
-    object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
-    object_flux = float(object_flux_data[0].strip())
-    object_error = 10**(float(object_error_data[0].strip()) / 2.5)
-    
-    iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
-
-    compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
-    compa_flux = float(compa_flux_data[0].strip())
-    
-    flux = object_flux / compa_flux #fluxを割って相対的にする
-    FLUX.append(flux)
-    ERROR.append(object_error)
-
-   #--------------------------------------------------------------
+    #--------------------------------------------------------------
     hdu = fits.open(image)
 
     data = hdu[0].data
@@ -158,7 +140,6 @@ for files in range(start_file,end_file+1):
     # TIME列にMJDを追加
     TIME.append(mjd)
 
- #--------------------------------------------------------------
     sky_center = (580, 495)  # (y, x)
     inner_radius = 24  # 内半径
     outer_radius = 29  # 外半径
@@ -220,9 +201,6 @@ for files in range(start_file,end_file+1):
 
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-
-    # 星の中心を求める
-
     
     for contour in contours:
         if cv2.contourArea(contour) < 10:
@@ -233,11 +211,24 @@ for files in range(start_file,end_file+1):
         with open(compa_path, mode='w') as f:
             f.write(str(xz)+' '+str(yz))
     
-        
-        
-    
- #--------------------------------------------------------------
     hdu.close()
+
+ #--------------------------------------------------------------
+    iraf.phot(image, coords=object_path, output=object_output_path) #目標星の測光
+
+    object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
+    object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
+    object_flux = float(object_flux_data[0].strip())
+    object_error = 10**(float(object_error_data[0].strip()) / 2.5)
+    
+    iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
+
+    compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
+    compa_flux = float(compa_flux_data[0].strip())
+    
+    flux = object_flux / compa_flux #fluxを割って相対的にする
+    FLUX.append(flux)
+    ERROR.append(object_error)
 
 data = {
     'FLUX': FLUX,
