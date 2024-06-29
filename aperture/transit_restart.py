@@ -251,7 +251,7 @@ plt.ylabel('Flux')
 plt.title('qFlux')
 plt.grid(True)
 plt.ylim(0.9,1.0)
-plt.savefig(f"/Users/takuto/iriki/{object}/{object}{dt_now}.png")
+plt.savefig(f"/Users/takuto/iriki/{object}/{object}_{dt_now}.png")
 
 
 
