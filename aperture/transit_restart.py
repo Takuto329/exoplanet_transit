@@ -176,9 +176,6 @@ for files in range(start_file,end_file+1):
             f.write(str(xz)+' '+str(yz))
 
 
-
-
-
     sky_center = (420, 145)  # (y, x)
     inner_radius = 24  # 内半径
     outer_radius = 29  # 外半径
