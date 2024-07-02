@@ -1,208 +1,244 @@
+#!/usr/bin/env python3
 from pyraf import iraf
 from iraf import noao
 from iraf import digiphot
 from iraf import apphot
 from iraf import images
-import matplotlib.pyplot as plt
-import math
+from astropy.io import fits
+from astropy.time import Time
+import pandas as pd 
 import os
-import pandas as pd
-
-object_name = input("目標天体名を入力してください: ")
-data = pd.read_csv('my_observe_log.csv', delimiter=',')
-data.set_index('object', inplace=True)
-def get_info(object_name):
-    if object_name in data.index:
-        row = data.loc[object_name]
-        day = row['yymmdd']
-        start_file = row['start_file']
-        end_file = row['end_file']
-        x_center = row['X_center']
-        y_center = row['Y_center']
-        cx_center = row['CXcenter']
-        cy_center = row['CYcenter']
-        Soot = row['Soot']
-        Eoot = row['Eoot']
-
-        return f"day={day}, start_file={start_file}, end_file={end_file},x_center={x_center}, y_center={y_center}, cx_center={cx_center}, cy_center={cy_center}, Soot={Soot}, Eoot={Eoot}"
-    else:
-        return "Object not found"
-
-row = data[data.index == object_name]
-if not row.empty:
-    day = row['yymmdd'].values[0]
-    start_file = row['start_file'].values[0]
-    end_file = row['end_file'].values[0]
-    x_center = row['X_center'].values[0]
-    y_center = row['Y_center'].values[0]
-    cx_center = row['CXcenter'].values[0]
-    cy_center = row['CYcenter'].values[0]
-    Soot = row['Soot'].values[0]
-    Eoot = row['Eoot'].values[0]
-
-os.chdir(object_name)
+import numpy as np
+import datetime
+import cv2
+from scipy.ndimage import center_of_mass
+import matplotlib.pyplot as plt
 
 
-band_list = ['j', 'h', 'k']
-for band in band_list:
+
+# object = input("star_data(e.g.240128):")
+object = 'GJ1214'
+
+#configファイルから各種パラメータをとってくる
+config_path = f"/Users/takuto/iriki/{object}/config_file/config.txt"
+config = pd.read_csv(config_path, delimiter='\t')
+data = pd.DataFrame(config)
+
+date = data.loc[data['parameter'] == 'date', 'value'].values[0]
+start_file = int(data.loc[data['parameter'] == 'start_file', 'value'].values[0])
+end_file = int(data.loc[data['parameter'] == 'end_file', 'value'].values[0])
+aperture = data.loc[data['parameter'] == 'aperture_radius', 'value'].values[0]
+annulus = data.loc[data['parameter'] == 'annulus', 'value'].values[0]
+dannulus = data.loc[data['parameter'] == 'dannulus', 'value'].values[0]
+
+#パラメータを決める
+iraf.unlearn('apphot')  
+iraf.apphot.fitskypars.annulus = annulus
+iraf.apphot.fitskypars.dannulus = dannulus
+iraf.apphot.photpars.apertures = aperture
+iraf.apphot.phot.interactive = 'no'
+iraf.apphot.phot.verify = 'no'
+iraf.apphot.phot.verbose = 'no'
+iraf.apphot.photpars.zmag = 0
 
 
-    iraf.unlearn('apphot')  # パラメータの初期化
-    iraf.apphot.datapars.datamax = 20000
-    iraf.apphot.datapars.readnoise = 30
-    iraf.apphot.datapars.epadu = 8
-    iraf.apphot.findpars.threshold = 7
-    iraf.apphot.findpars.sharphi = 0.7
-    iraf.apphot.daofind.interac = 'no'
-    iraf.apphot.daofind.verify = 'no'
-    iraf.apphot.datapars.fwhmpsf = 3
-    iraf.apphot.centerpars.cbox = 5
-    with open(f'aperture_radius_{object_name}_{"{}".format(band)}.txt', 'r') as file:
-        aperture = file.readlines()
-        line = aperture[0].split()
-        aperture_radius = line[0]
-        print(aperture_radius)
-    iraf.apphot.fitskypars.annulus = float(aperture_radius) + 5
-    iraf.apphot.fitskypars.dannulus = 10
-    iraf.apphot.photpars.apertures = aperture_radius
-    iraf.apphot.phot.interactive = 'no'
-    iraf.apphot.phot.verify = 'no'
-    iraf.apphot.phot.verbose = 'no'
-    iraf.apphot.photpars.zmag = 0
-    iraf.imstat.lower = '-1000'
-    iraf.imstat.upper = '20000'
-    iraf.imstat.nclip = 10
-    iraf.imstat.lsigma = 3
-    iraf.imstat.usigma = 3
-    iraf.imstat.binwidth = 0.1
-    iraf.imstat.fields = 'sum,area'
-    iraf.imstat.format = 'yes'
-    iraf.imstat.cache = 'yes'
 
-    with open('j.coo', 'w') as file:
-        file.write(f"{x_center} {y_center}\n{cx_center} {cy_center}\n")
-    A = 1.7
-    B = 15.19
-    xh_center = x_center - A
-    yh_center = y_center - B
-    cxh_center = cx_center - A
-    cyh_center = cy_center - B
-    with open('h.coo', 'w') as file:
-        file.write(f"{xh_center} {yh_center}\n{cxh_center} {cyh_center}\n")
-    C = 20.23
-    D = 9.72
-    xks_center = x_center - C
-    yks_center = y_center - D
-    cxks_center = cx_center - C
-    cyks_center = cy_center - D
-    with open('ks.coo', 'w') as file:
-        file.write(f"{xks_center} {yks_center}\n{cxks_center} {cyks_center}\n")
+#パスの指定
+image_path = f"/Users/takuto/iriki/{object}/reduction_image"
+syu_path = f"/Users/takuto/iriki/{object}"
 
-    JD = []
-    for i in range(start_file, end_file + 1):
-        JDimage = "j{}-{:04d}.fits".format(day, i)
-        if not os.path.exists(JDimage):
-            print("File {} does not exist. Skipping.".format(JDimage))
+object_path = f"/Users/takuto/iriki/{object}/config_file/object.coo"
+compa_path = f"/Users/takuto/iriki/{object}/config_file/compa.coo"
+
+object_output_path = f"/Users/takuto/iriki/{object}/data/object_value.txt"
+compa_output_path = f"/Users/takuto/iriki/{object}/data/compa_value.txt"
+
+#-------------------------------------------------------------- 
+#マスクの関数 
+def create_annulus_mask(shape, center, inner_radius, outer_radius):
+    """
+    Create a binary mask with an annulus (a ring).
+    
+    Parameters:
+    shape (tuple): Shape of the output mask (height, width).
+    center (tuple): Center of the annulus (y, x).
+    inner_radius (float): Inner radius of the annulus.
+    outer_radius (float): Outer radius of the annulus.
+    
+    Returns:
+    numpy.ndarray: Binary mask with an annulus.
+    """
+    y, x = np.ogrid[:shape[0], :shape[1]]
+    dist_from_center = np.sqrt((x - center[1])**2 + (y - center[0])**2)
+    mask = (dist_from_center >= inner_radius) & (dist_from_center <= outer_radius)
+    return mask
+
+
+    
+#-------------------------------------------------------------- 
+#RMSの関数
+def rms(x) : 
+  return np.sqrt(np.mean( np.square(x)))
+#-------------------------------------------------------------- 
+#解析
+FLUX = []
+ERROR = []
+X = []
+Y = []
+TIME = []
+AIRMASS = []
+
+
+for files in range(start_file,end_file+1):
+
+    # image = f"{image_path}/j{date}-{files:04d}.fits"
+    image = f"{image_path}/hf{files:04d}.fits" #GJ1214をするとき用(廃線みたいでいいね)
+
+    if not os.path.exists(image):
+        print("File {} does not exist. Skipping.".format(image))
+        continue
+#--------------------------------------------------------------    
+    hdu = fits.open(image)
+#--------------------------------------------------------------
+    data = hdu[0].data
+    x_center, y_center = 580, 495
+    radius = 20
+
+    y, x = np.ogrid[:data.shape[0], :data.shape[1]]
+    mask = (x - x_center)**2 + (y - y_center)**2 <= radius**2
+    masked_data = np.where(mask, data, 0)
+    y_centroid, x_centroid = center_of_mass(masked_data)
+
+    x_M = x_center - x_centroid
+    y_M = y_center - y_centroid
+
+    X.append(x_M)
+    Y.append(y_M)
+#--------------------------------------------------------------
+    AIRMASS.append(hdu[0].header["AIRMASS"])
+#--------------------------------------------------------------    
+    # TIME.append(hda[0].header["MJD"]) #JDをとってくる
+#--------------------------------------------------------------   
+    DATE_UTC = hdu[0].header["DATE_UTC"]
+    TIME_UTC = hdu[0].header["TIME_UTC"]
+
+    # UTC日時を指定
+    datetime_utc = DATE_UTC + ' ' + TIME_UTC
+    
+    # astropy.timeを使ってUTC日時をMJDに変換
+    time = Time(datetime_utc, format='iso', scale='utc')
+    mjd = time.jd
+    
+    # TIME列にMJDを追加
+    TIME.append(mjd)
+#--------------------------------------------------------------
+    sky_center = (580, 495)  # (y, x)
+    inner_radius = 50  # 内半径
+    outer_radius = 60  # 外半径
+
+    mask = create_annulus_mask(data.shape, sky_center, inner_radius, outer_radius)
+    sky_region = data[mask]
+    sky_threshold = np.max(sky_region)
+
+    x_start, x_end = 490, 670
+    y_start, y_end = 410, 590
+
+    region = data[y_start:y_end, x_start:x_end]
+
+    binary_region = (region > sky_threshold).astype(int)
+
+    # OpenCVを使用して星を検出し、その中心を求める
+    binary_image = (binary_region * 255).astype(np.uint8)  # OpenCVが扱いやすいように変換
+
+    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    for contour in contours:
+        if cv2.contourArea(contour) < 10:
             continue
-        JD_value = float(iraf.imget(JDimage, "JD" ,Stdout = 1)) - 2400000
-        JD.append(JD_value)
+        (x, y), radius = cv2.minEnclosingCircle(contour)
+        xz = x + 490
+        yz = y + 410
+        with open(object_path, mode='w') as f:
+            f.write(str(xz)+' '+str(yz))
+ #--------------------------------------------------------------
+    sky_center = (420, 147)  # (y, x)
+    inner_radius = 50  # 内半径
+    outer_radius = 60  # 外半径
 
+    mask = create_annulus_mask(data.shape, sky_center, inner_radius, outer_radius)
+    sky_region = data[mask]
+    sky_threshold = np.max(sky_region)
 
+    x_start, x_end = 380, 470
+    y_start, y_end = 97, 197
 
-        myimage = "observe{}{}-{:04d}.fits".format(band, day, i)
-        if not os.path.exists(myimage):
-            print("File {} does not exist. Skipping.".format(myimage))
+    region = data[y_start:y_end, x_start:x_end]
+
+    binary_region = (region > sky_threshold).astype(int)
+
+    # OpenCVを使用して星を検出し、その中心を求める
+    binary_image = (binary_region * 255).astype(np.uint8)  # OpenCVが扱いやすいように変換
+
+    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    for contour in contours:
+        if cv2.contourArea(contour) < 10:
             continue
+        (x, y), radius = cv2.minEnclosingCircle(contour)
+        xz = x + 380
+        yz = y + 97
+        with open(compa_path, mode='w') as f:
+            f.write(str(xz)+' '+str(yz))
+ #--------------------------------------------------------------         
+    hdu.close()
+ #--------------------------------------------------------------
+    iraf.phot(image, coords=object_path, output=object_output_path) #目標星の測光
+    object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
+    object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
+    object_flux = float(object_flux_data[0].strip())
+    # object_error = 10**((float(object_error_data[0].strip())) / 2.5)
+    object_error = 0
+    
 
-        output = "{}{:04d}.mag".format(band, i)
-        if band == 'h':
-            coords_file = 'h.coo'
-        elif band == 'k':
-            coords_file = 'ks.coo'
-        else:
-            coords_file = 'j.coo'
-        iraf.phot(myimage, coords=coords_file ,output=output)
-        a = iraf.imget(output, "Flux" ,Stdout = 1)
+    
 
-        center = "A{}{:04d}.mag".format(band, i)
-        a_save = '0'
+    
+    iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
+    compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
+    compa_flux = float(compa_flux_data[0].strip())
+    
+    flux = object_flux / compa_flux #fluxを割って相対的にする
 
-        try:
-            with open(output, 'r') as file:
-                lines = file.readlines()
-                if lines:
-                    line = lines[79].split()
-                    a_save = line[3]
-                    line2 = lines[84].split()
-                    b_save = line2[3]
-                    a_save = float(a_save)
-                    b_save = float(b_save)
-                    c_save = a_save - b_save
+    FLUX.append(flux)
+    ERROR.append(object_error)
+    
+ #--------------------------------------------------------------
+data = {
+    'TIME': TIME,
+    'FLUX': FLUX,
+    'ERROR': ERROR,
+    'AIRMASS': AIRMASS,
+    'X': X,
+    'Y': Y
+}
+df = pd.DataFrame(data)
 
-        except FileNotFoundError:
-            pass
+dt_now = datetime.datetime.now()
+# データフレームをテキストファイルに保存
+df.to_csv(f"/Users/takuto/iriki/{object}/A_data/{dt_now}.txt", index = False, sep=' ')
 
-        with open(center, 'w') as file:
-            file.write(f"{c_save}")
-
-
-
-
-    X = []
-    Y1 = []
-    a_save = '0'
-    JD_save = '0'
-    for i in range(start_file, end_file + 1):
-
-        mag_file = "A{}{:04d}.mag".format(band, i)
-        JD_file = "JD{:04d}.mag".format(i)
-        if not os.path.exists(mag_file):
-            print("File {} does not exist. Skipping.".format(mag_file))
-            continue
-        if not os.path.exists(JD_file):
-            print("File {} does not exist. Skipping.".format(JD_file))
-            continue
-        a_save = '0'
-        JD_save = '0'
-        plt.figure()
-        try:
-            with open(mag_file, 'r') as file:
-                lines = file.readlines()
-                if lines:
-                    line = lines[0].split()
-                    a_save = line[0]
-
-        except FileNotFoundError:
-            pass
-
-        try:
-            with open(JD_file, 'r') as file:
-                JD_save = file.read()
-        except FileNotFoundError:
-            pass
-
-        X.append(float(JD_save))
-        Y1.append(float(a_save))
-
-    # データの散布図をプロット
-    plt.plot(X, Y1, label='X', color='blue', marker='x', linewidth=1)
-
-    # グラフのラベル
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.title("{}_{}".format(object_name, band))
-    plt.legend()
-    plt.grid(True)
-    # plt.ylim(20000, 30000)
-    plt.savefig(f'transit_{object_name}_{"{}".format(band)}.png', dpi=300)
+plt.scatter(TIME,FLUX,alpha=0.5)
+plt.xlabel('JD')
+plt.ylabel('Flux')
+plt.title('qFlux')
+plt.grid(True)
+plt.ylim(0.9,1.0)
+plt.savefig(f"/Users/takuto/iriki/{object}/A_data/{dt_now}.png")
 
 
+df2 = df[~((df['TIME']>55787.8178) & (df['TIME']< 55787.85548))]
+time_OOT = df2['TIME']
+flux_OOT = df2['FLUX']
 
-    directory = os.getcwd()
-
-    #ディレクトリ内のファイルを取得してループ処理
-    for filename in os.listdir(directory):
-        if filename.endswith(".mag"):
-            file_path = os.path.join(directory, filename)
-            os.remove(file_path)
+print("rms:", rms(flux_OOT)) 
 
