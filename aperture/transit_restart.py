@@ -13,7 +13,7 @@ import datetime
 import cv2
 from scipy.ndimage import center_of_mass
 import matplotlib.pyplot as plt
-from scipy.ndimage import center_of_mass
+
 
 
 # object = input("star_data(e.g.240128):")
@@ -33,15 +33,6 @@ dannulus = data.loc[data['parameter'] == 'dannulus', 'value'].values[0]
 
 #パラメータを決める
 iraf.unlearn('apphot')  
-iraf.apphot.datapars.datamax = 20000
-iraf.apphot.datapars.readnoise = 30
-iraf.apphot.datapars.epadu = 8
-iraf.apphot.findpars.threshold = 7
-iraf.apphot.findpars.sharphi = 0.8
-iraf.apphot.daofind.interac = 'no'
-iraf.apphot.daofind.verify = 'no'
-iraf.apphot.datapars.fwhmpsf = 3
-iraf.apphot.centerpars.cbox = 5
 iraf.apphot.fitskypars.annulus = annulus
 iraf.apphot.fitskypars.dannulus = dannulus
 iraf.apphot.photpars.apertures = aperture
@@ -49,15 +40,7 @@ iraf.apphot.phot.interactive = 'no'
 iraf.apphot.phot.verify = 'no'
 iraf.apphot.phot.verbose = 'no'
 iraf.apphot.photpars.zmag = 0
-iraf.imstat.lower = '-1000'
-iraf.imstat.upper = '20000'
-iraf.imstat.nclip = 10
-iraf.imstat.lsigma = 3
-iraf.imstat.usigma = 3
-iraf.imstat.binwidth = 0.1
-iraf.imstat.fields = 'sum,area'
-iraf.imstat.format = 'yes'
-iraf.imstat.cache = 'yes'
+
 
 
 #パスの指定
@@ -70,7 +53,8 @@ compa_path = f"/Users/takuto/iriki/{object}/config_file/compa.coo"
 object_output_path = f"/Users/takuto/iriki/{object}/data/object_value.txt"
 compa_output_path = f"/Users/takuto/iriki/{object}/data/compa_value.txt"
 
-
+#-------------------------------------------------------------- 
+#マスクの関数 
 def create_annulus_mask(shape, center, inner_radius, outer_radius):
     """
     Create a binary mask with an annulus (a ring).
@@ -88,7 +72,11 @@ def create_annulus_mask(shape, center, inner_radius, outer_radius):
     dist_from_center = np.sqrt((x - center[1])**2 + (y - center[0])**2)
     mask = (dist_from_center >= inner_radius) & (dist_from_center <= outer_radius)
     return mask
-
+#-------------------------------------------------------------- 
+#RMSの関数
+def rms(x) : 
+  return np.sqrt(np.mean( np.square(x)))
+#-------------------------------------------------------------- 
 #解析
 FLUX = []
 ERROR = []
@@ -126,6 +114,7 @@ for files in range(start_file,end_file+1):
     AIRMASS.append(hdu[0].header["AIRMASS"])
 #--------------------------------------------------------------    
     # TIME.append(hda[0].header["MJD"]) #JDをとってくる
+#--------------------------------------------------------------   
     DATE_UTC = hdu[0].header["DATE_UTC"]
     TIME_UTC = hdu[0].header["TIME_UTC"]
 
@@ -134,14 +123,14 @@ for files in range(start_file,end_file+1):
     
     # astropy.timeを使ってUTC日時をMJDに変換
     time = Time(datetime_utc, format='iso', scale='utc')
-    mjd = time.mjd
+    mjd = time.jd
     
     # TIME列にMJDを追加
     TIME.append(mjd)
 #--------------------------------------------------------------
     sky_center = (580, 495)  # (y, x)
-    inner_radius = 24  # 内半径
-    outer_radius = 29  # 外半径
+    inner_radius = 50  # 内半径
+    outer_radius = 60  # 外半径
 
     mask = create_annulus_mask(data.shape, sky_center, inner_radius, outer_radius)
     sky_region = data[mask]
@@ -169,8 +158,8 @@ for files in range(start_file,end_file+1):
             f.write(str(xz)+' '+str(yz))
  #--------------------------------------------------------------
     sky_center = (420, 147)  # (y, x)
-    inner_radius = 24  # 内半径
-    outer_radius = 29  # 外半径
+    inner_radius = 50  # 内半径
+    outer_radius = 60  # 外半径
 
     mask = create_annulus_mask(data.shape, sky_center, inner_radius, outer_radius)
     sky_region = data[mask]
@@ -203,7 +192,10 @@ for files in range(start_file,end_file+1):
     object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
     object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
     object_flux = float(object_flux_data[0].strip())
-    object_error = 10**(float(object_error_data[0].strip()) / 2.5)
+    object_error = 10**((float(object_error_data[0].strip())) / 2.5)
+    object_error = 0
+    
+
     
     iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
     compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
@@ -215,30 +207,33 @@ for files in range(start_file,end_file+1):
     ERROR.append(object_error)
  #--------------------------------------------------------------
 data = {
+    'TIME': TIME,
     'FLUX': FLUX,
     'ERROR': ERROR,
-    'TIME': TIME,
-    'AIRMASS': AIRMASS,
-    'X': X,
-    'Y': Y
+    # 'AIRMASS': AIRMASS,
+    # 'X': X,
+    # 'Y': Y
 }
 df = pd.DataFrame(data)
 
 dt_now = datetime.datetime.now()
 # データフレームをテキストファイルに保存
-df.to_csv(f"/Users/takuto/iriki/{object}/{dt_now}data.txt", index = False, sep=',')
+df.to_csv(f"/Users/takuto/iriki/{object}/A_data/{dt_now}.txt", index = False, sep=' ')
 
-plt.scatter(range(len(FLUX)),FLUX) 
-# plt.scatter(TIME,FLUX)
+plt.scatter(TIME,FLUX,alpha=0.5)
 plt.xlabel('JD')
 plt.ylabel('Flux')
 plt.title('qFlux')
 plt.grid(True)
 plt.ylim(0.9,1.0)
-plt.savefig(f"/Users/takuto/iriki/{object}/{dt_now}.png")
+plt.savefig(f"/Users/takuto/iriki/{object}/A_data/{dt_now}.png")
 
 
+df2 = df[~((df['TIME']>55787.8178) & (df['TIME']< 55787.85548))]
+time_OOT = df2['TIME']
+flux_OOT = df2['FLUX']
 
+print("rms:", rms(flux_OOT)) 
 
 
 
