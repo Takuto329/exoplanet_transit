@@ -72,13 +72,6 @@ def create_annulus_mask(shape, center, inner_radius, outer_radius):
     dist_from_center = np.sqrt((x - center[1])**2 + (y - center[0])**2)
     mask = (dist_from_center >= inner_radius) & (dist_from_center <= outer_radius)
     return mask
-
-
-    
-#-------------------------------------------------------------- 
-#RMSの関数
-def rms(x) : 
-  return np.sqrt(np.mean( np.square(x)))
 #-------------------------------------------------------------- 
 #解析
 FLUX = []
@@ -199,10 +192,6 @@ for files in range(start_file,end_file+1):
     # object_error = 10**((float(object_error_data[0].strip())) / 2.5)
     object_error = 0
     
-
-    
-
-    
     iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
     compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
     compa_flux = float(compa_flux_data[0].strip())
@@ -236,9 +225,5 @@ plt.ylim(0.9,1.0)
 plt.savefig(f"/Users/takuto/iriki/{object}/A_data/{dt_now}.png")
 
 
-df2 = df[~((df['TIME']>55787.8178) & (df['TIME']< 55787.85548))]
-time_OOT = df2['TIME']
-flux_OOT = df2['FLUX']
 
-print("rms:", rms(flux_OOT)) 
 
