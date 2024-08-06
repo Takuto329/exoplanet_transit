@@ -78,6 +78,7 @@ FLUX = []
 O_FLUX = []
 C_FLUX = []
 ERROR = []
+SKY = []
 X = []
 Y = []
 TIME = []
@@ -190,23 +191,29 @@ for files in range(start_file,end_file+1):
  #--------------------------------------------------------------
     iraf.phot(image, coords=object_path, output=object_output_path) #目標星の測光
     object_flux_data = iraf.pdump(object_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
-    object_error_data = iraf.pdump(object_output_path, fields="merr",expr="yes",Stdout=1)
+    sky_data = iraf.pdump(object_output_path, fields="MSKY",expr="yes",Stdout=1)
     object_flux = float(object_flux_data[0].strip())
-    O_FLUX.append(object_flux)
+    sky = float(sky_data[0].strip())
+    
     # object_error = 10**((float(object_error_data[0].strip())) / 2.5)
     object_error = 0
     
+
     iraf.phot(image, coords=compa_path, output=compa_output_path) #比較星の測光
     compa_flux_data = iraf.pdump(compa_output_path, fields="FLUX",expr="yes",Stdout=1) #pdumpでmagをとってくる
     compa_flux = float(compa_flux_data[0].strip())
-    C_FLUX.append(compa_flux)
     
+    
+
     flux = object_flux / compa_flux #fluxを割って相対的にする
 
 
 
     FLUX.append(flux)
     ERROR.append(object_error)
+    O_FLUX.append(object_flux)
+    C_FLUX.append(compa_flux)
+    SKY.append(sky)
     
     
  #--------------------------------------------------------------
@@ -216,9 +223,10 @@ data = {
     'O_FLUX': O_FLUX,
     'C_FLUX': C_FLUX,
     # 'ERROR': ERROR,
-    'AIRMASS': AIRMASS
-    # 'X': X,
-    # 'Y': Y
+    'AIRMASS': AIRMASS,
+    'SKY': SKY,
+    'dx': X,
+    'dy': Y
     
 }
 df = pd.DataFrame(data)
@@ -230,9 +238,8 @@ df.to_csv(f"/Users/takuto/iriki/{object}/A_data/sa.txt", index = False, sep=' ')
 # plt.scatter(TIME,FLUX,alpha=0.5)
 # plt.xlabel('JD')
 # plt.ylabel('Flux')
-# plt.title('qFlux')
+# plt.title('Transit')
 # plt.grid(True)
-# plt.ylim(0.9,1.0)
 # plt.savefig(f"/Users/takuto/iriki/{object}/A_data/{dt_now}.png")
 
 # plt.scatter(TIME,O_FLUX,alpha=0.5)
