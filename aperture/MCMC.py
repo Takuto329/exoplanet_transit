@@ -14,10 +14,23 @@ z = df2['Airmass']  # エアマス
 dx = df2['x']  # x方向の位置変化
 dy = df2['y']  # y方向の位置変化
 
+df = results
+t_all = df['MJD']
+F_obs_all = df['Flux Ratio (Object/Comparison)']
+error_all = df['error']
+z_all = df['Airmass']  # エアマス
+dx_all = df['x']  # x方向の位置変化
+dy_all = df['y']  # y方向の位置変化
+
 # モデル式
 def model(k_z, k_x, k_y):
     delta_m_cor = k_z * z + k_x * dx + k_y * dy
     F_cor = F_obs*10**(-0.4 * delta_m_cor)
+    return F_cor
+
+def model_re(k_z, k_x, k_y):
+    delta_m_cor = k_z * z_all + k_x * dx_all + k_y * dy_all
+    F_cor = F_obs_all*10**(-0.4 * delta_m_cor)
     return F_cor
 
 # 尤度関数 (ばらつきを最小化)
@@ -73,10 +86,17 @@ best_fit_kx = np.median(samples[:, 1])
 best_fit_ky = np.median(samples[:, 2])
 # フィット結果のプロット (観測データと補正後のデータの比較)
 corrected_flux = model(best_fit_kz, best_fit_kx, best_fit_ky)
+all_flux = model_re(best_fit_kz, best_fit_kx, best_fit_ky)
+V = np.mean(corrected_flux)
+
+relative_flux = all_flux  / V
+
 
 plt.figure(figsize=(10, 6))
-plt.scatter(t, F_obs, label="Observed")
-plt.scatter(t, corrected_flux, label="Corrected Data", color="orange")
+# plt.scatter(t, F_obs, label="Observed")
+# plt.scatter(t, corrected_flux, label="Corrected Data", color="orange")
+plt.scatter(t_all, relative_flux, label="Relative_Flux")
+plt.errorbar(t_all,relative_flux,yerr=error_all, fmt='none', ecolor='black', capsize=3, zorder=1)
 plt.xlabel("Time")
 plt.ylabel("Flux")
 plt.legend()

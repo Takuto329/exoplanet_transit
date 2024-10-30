@@ -1,7 +1,7 @@
 #%%
 from pyraf_setting import aperture_object, aperture_compa, calculate_f_and_error
 from MJD_AIRMASS import MJD, AIRMASS
-from pyraf_setup import calculate_centroid
+from find_centroid import calculate_centroid
 import pandas as pd 
 import matplotlib.pyplot as plt
 import os

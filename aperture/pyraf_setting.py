@@ -5,7 +5,7 @@ from iraf import digiphot
 from iraf import apphot
 from iraf import images
 import numpy as np
-from yy import find_optimal_aperture_radius
+from find_aperture import find_optimal_aperture_radius
 
 def calculate_f_and_error(object_flux,object_error,compa_flux,compa_error):
     total_error = np.sqrt((object_error/compa_flux)**2 + (object_flux*compa_error/compa_flux**2)**2)
