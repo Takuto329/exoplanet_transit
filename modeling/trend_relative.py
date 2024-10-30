@@ -60,13 +60,14 @@ flux2 = (object_flux / compa_flux) #比較のために生のの
 # 最小二乗法でパラメータを推定
 
 
-data = flux / (min_slope* time + min_intercept)
-
+relative_flux = flux / (min_slope* time + min_intercept)
+df['RELATIVE'] = relative_flux
+df.to_csv(f"/Users/takuto/iriki/GJ1214/A_data/sa.txt", sep=' ', index=False)
 
 
 # データとフィットラインのプロット
 plt.scatter(time, flux, label='Data', alpha=0.5, color='b')
-plt.scatter(time, data, label='Data', alpha=0.5, color='r')
+plt.scatter(time, relative_flux, label='Data', alpha=0.5, color='r')
 plt.xlabel('Time')
 plt.ylabel('Flux')
 plt.legend()
